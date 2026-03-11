@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Enums are not supported in SQLite with early Prisma, using String instead
+// Role: PATIENT, ADMIN, STAFF
+// Status: SUBMITTED, IN_REVIEW, ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED
+// Priority: LOW, MEDIUM, HIGH, CRITICAL
+
+model User {
+  id               String            @id @default(uuid())
+  name             String
+  email            String            @unique
+  password         String
+  role             String            @default("PATIENT")
+  complaints       Complaint[]       @relation("PatientComplaints")
+  assignedIssues   Complaint[]       @relation("AssignedComplaints")
+  updates          ComplaintUpdate[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Complaint {
+  id                String            @id @default(uuid())
+  patientId         String
+  patient           User              @relation("PatientComplaints", fields: [patientId], references: [id])
+  patientIdentifier String?           // ID provided by hospital
+  department        String
+  category          String
+  description       String
+  priority          String            @default("MEDIUM")
+  status            String            @default("SUBMITTED")
+  assignedToId      String?
+  assignedTo        User?             @relation("AssignedComplaints", fields: [assignedToId], references: [id])
+  evidenceUrl       String?
+  updates           ComplaintUpdate[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model ComplaintUpdate {
+  id          String    @id @default(uuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  updatedById String
+  updatedBy   User      @relation(fields: [updatedById], references: [id])
+  statusTo    String
+  comment     String?
+  createdAt   DateTime  @default(now())
+}
